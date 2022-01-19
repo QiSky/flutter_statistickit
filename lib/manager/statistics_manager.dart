@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:isolate/isolate_runner.dart';
 import 'package:isolate/load_balancer.dart';
 import 'package:statistic/manager/timer_manager.dart';
+import 'package:statistic/model/StatisticData.dart';
 
 import 'http_manager.dart';
 
@@ -11,15 +12,12 @@ enum StatisticSendType {
   ///单次发送，发送时机：立刻
   SINGLE,
 
-  /// 组合发送，发送时机：间隔性
+  /// 组合发送，发送时机：间隔诺干时间单位
   ARRAY
 }
 
 ///单次发送选择的数据类型
 enum StatisticSingleSendDataType {
-  ///转换成json字符串
-  STRING,
-
   ///普通对象类型
   BODY,
 
@@ -34,21 +32,17 @@ void _sendSingleEvent(Map<String, dynamic> argument) {
   switch (dataType) {
     case StatisticSingleSendDataType.ARRAY_STRING:
       HttpManager.instance.getRequest(url,
-          method: HttpManager.METHOD_POST, data: jsonEncode([data]));
+          method: HttpManager.METHOD_POST, data: jsonEncode(data));
       break;
     case StatisticSingleSendDataType.BODY:
       HttpManager.instance
           .getRequest(url, method: HttpManager.METHOD_POST, data: data);
       break;
-    case StatisticSingleSendDataType.STRING:
-      HttpManager.instance.getRequest(url,
-          method: HttpManager.METHOD_POST, data: jsonEncode(data));
-      break;
   }
 }
 
 void _sendArrayEvent(Map<String, dynamic> argument) {
-  List<dynamic> data = argument["data"];
+  List<StatisticData> data = argument["data"];
   String url = argument["url"];
   if (data.isNotEmpty)
     HttpManager.instance.getRequest(url,
@@ -66,7 +60,7 @@ class StatisticsManager {
   late String _apiUrl;
 
   ///数组发送状态下存储的List
-  late List<dynamic> _storeList = [];
+  late List<StatisticData> _storeList = [];
 
   ///目前发送器状态
   bool _isActive = false;
@@ -76,18 +70,30 @@ class StatisticsManager {
 
   static const STATISTIC_TIMER = "Statistic_Timer";
 
-  static StatisticsManager getInstance() {
+  ///初始化包名
+  String? _package;
+
+  ///初始化标识
+  String? _identify;
+
+  static StatisticsManager get instance => _getInstance();
+
+  static StatisticsManager _getInstance() {
     _instance ??= StatisticsManager();
     return _instance!;
   }
 
   ///初始化
   ///@apiUrl 子地址
-  ///@sendDuration 多项发送间隔
-  Future<bool> init(String apiUrl, {int sendDuration = 5}) async {
-    _balance = await LoadBalancer.create(3, IsolateRunner.spawn);
+  ///@sendDuration 多项发送间隔(秒)
+  Future<bool> init(String apiUrl,
+      {int sendDuration = 5, String? package, String? identify}) async {
+    _balance = await LoadBalancer.create(4, IsolateRunner.spawn);
 
     _isActive = true;
+
+    _package = package;
+    _identify = identify;
 
     _apiUrl = apiUrl;
     _sendDuration = sendDuration;
@@ -109,16 +115,22 @@ class StatisticsManager {
   }
 
   ///发送事件
-  void sendEvent(dynamic event,
+  void sendEvent(StatisticData data,
       {StatisticSendType sendType = StatisticSendType.SINGLE,
       StatisticSingleSendDataType dataType =
           StatisticSingleSendDataType.ARRAY_STRING}) {
+    if (data.package == null) {
+      data.package = _package;
+    }
+    if (data.identify == null) {
+      data.identify = _identify;
+    }
     if (_isActive) {
       if (sendType == StatisticSendType.ARRAY)
-        _storeList.add(event);
+        _storeList.add(data);
       else
         _balance.run<void, Map<String, dynamic>>(_sendSingleEvent,
-            {"data": event, "dataType": dataType, "url": _apiUrl});
+            {"data": data, "dataType": dataType, "url": _apiUrl});
     }
   }
 
