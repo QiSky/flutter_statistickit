@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:isolate/isolate_runner.dart';
 import 'package:isolate/load_balancer.dart';
 import 'package:statistic/manager/timer_manager.dart';
-import 'package:statistic/model/StatisticData.dart';
+import 'package:statistic/model/statistic_data.dart';
 
 import 'http_manager.dart';
 
@@ -119,8 +119,8 @@ class StatisticsManager {
       {StatisticSendType sendType = StatisticSendType.SINGLE,
       StatisticSingleSendDataType dataType =
           StatisticSingleSendDataType.ARRAY_STRING}) {
-    if (data.package == null) {
-      data.package = _package;
+    if (data.packages == null) {
+      data.packages = _package;
     }
     if (data.identify == null) {
       data.identify = _identify;
@@ -130,7 +130,7 @@ class StatisticsManager {
         _storeList.add(data);
       else
         _balance.run<void, Map<String, dynamic>>(_sendSingleEvent,
-            {"data": data, "dataType": dataType, "url": _apiUrl});
+            {"data": [data], "dataType": dataType, "url": _apiUrl});
     }
   }
 

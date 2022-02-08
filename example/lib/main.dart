@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:statistic/manager/statistics_manager.dart';
+import 'package:statistic/model/statistic_data.dart';
 import 'package:statistic/statistic.dart';
 
 void main() {
@@ -19,6 +21,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    StatisticsManager.instance.init("http://localhost:8881/statistic/post");
     initPlatformState();
   }
 
@@ -52,7 +55,12 @@ class _MyAppState extends State<MyApp> {
           title: const Text('Plugin example app'),
         ),
         body: Center(
-          child: Text('Running on: $_platformVersion\n'),
+          child: RaisedButton(
+              child: Text("test"),
+              onPressed: () {
+                StatisticsManager.instance.sendEvent(StatisticData("test", {},
+                    packages: "packages", identify: "test"));
+              }),
         ),
       ),
     );

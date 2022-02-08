@@ -1,5 +1,5 @@
 class StatisticData {
-  String? package;
+  String? packages;
 
   String? identify;
 
@@ -7,19 +7,22 @@ class StatisticData {
 
   late Map<String, dynamic> data;
 
+  late final int time = DateTime.now().millisecondsSinceEpoch;
+
   StatisticData(
     this.event,
     this.data, {
-    this.package,
+    this.packages,
     this.identify,
   });
 
   Map<String, dynamic> toJson() {
     return {
-      "package": package ?? '',
+      "packages": packages ?? '',
       "identify": identify ?? '',
       "event": event,
-      "data": data
+      "data": data,
+      "time": time
     };
   }
 }
